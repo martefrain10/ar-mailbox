@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AR Postage Stamp - Mailbox Animation</title>
+    
+    <!-- Import A-Frame and AR.js -->
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        
+        .info-panel {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            z-index: 999;
+            max-width: 300px;
+        }
+        
+        .info-panel h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+        }
+        
+        .info-panel p {
+            margin: 5px 0;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            z-index: 1000;
+            text-align: center;
+        }
+        
+        .error {
+            background: rgba(180, 0, 0, 0.9);
+        }
+        
+        #arjs-video {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body>
+    <div class="info-panel">
+        <h3>📮 AR Mailbox Viewer</h3>
+        <p>Point your camera at the postage stamp marker to see the 3D mailbox!</p>
+        <p id="status">Initializing camera...</p>
+    </div>
+    
+    <div id="loading" class="loading">
+        <h3>Loading AR Experience...</h3>
+        <p>Please allow camera access when prompted</p>
+    </div>
+
+    <!-- AR Scene -->
+    <a-scene
+        vr-mode-ui="enabled: false"
+        renderer="logarithmicDepthBuffer: true"
+        embedded
+        arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;">
+        
+        <!-- Define assets -->
+        <a-assets>
+            <!-- Your 3D model will go here -->
+            <a-asset-item id="mailbox-model" src="mailbox.glb"></a-asset-item>
+        </a-assets>
+        
+        <!-- Marker-based AR - using pattern marker -->
+        <a-marker preset="hiro" id="marker">
+            <!-- 3D Model Entity -->
+            <a-entity
+                id="mailbox"
+                gltf-model="#mailbox-model"
+                scale="0.5 0.5 0.5"
+                position="0 0 0"
+                rotation="0 0 0"
+                animation-mixer>
+            </a-entity>
+            
+            <!-- Add a light source for better visibility -->
+            <a-light type="ambient" color="#ffffff" intensity="1"></a-light>
+            <a-light type="directional" color="#ffffff" intensity="0.5" position="1 1 1"></a-light>
+        </a-marker>
+        
+        <!-- Camera -->
+        <a-entity camera></a-entity>
+    </a-scene>
+
+    <script>
+        // Status messages
+        const statusEl = document.getElementById('status');
+        const loadingEl = document.getElementById('loading');
+        
+        // Initialize AR
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                loadingEl.style.display = 'none';
+                statusEl.textContent = 'Camera ready! Look for the marker.';
+            }, 3000);
+        });
+        
+        // Track marker detection
+        const marker = document.querySelector('#marker');
+        let markerVisible = false;
+        
+        marker.addEventListener('markerFound', () => {
+            markerVisible = true;
+            statusEl.textContent = '✅ Marker detected! Showing mailbox...';
+            console.log('Marker found');
+        });
+        
+        marker.addEventListener('markerLost', () => {
+            markerVisible = false;
+            statusEl.textContent = 'Marker lost. Point camera at the stamp.';
+            console.log('Marker lost');
+        });
+        
+        // Handle errors
+        window.addEventListener('error', (e) => {
+            console.error('Error:', e);
+            if (e.message.includes('mailbox.glb')) {
+                loadingEl.className = 'loading error';
+                loadingEl.innerHTML = `
+                    <h3>⚠️ Model Not Found</h3>
+                    <p>Please ensure 'mailbox.glb' is in the same folder as this HTML file.</p>
+                `;
+                loadingEl.style.display = 'block';
+            }
+        });
+        
+        // Camera permissions
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(() => {
+                console.log('Camera access granted');
+            })
+            .catch((err) => {
+                loadingEl.className = 'loading error';
+                loadingEl.innerHTML = `
+                    <h3>📷 Camera Access Required</h3>
+                    <p>Please allow camera access and refresh the page.</p>
+                `;
+                loadingEl.style.display = 'block';
+                console.error('Camera access denied:', err);
+            });
+    </script>
+</body>
+</html>
